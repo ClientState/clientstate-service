@@ -16,9 +16,10 @@ start = (context) ->
     r.context[k] = v
 
 
-
 GET_COMMANDS = [
   "GET",
+  # Lists
+  "LRANGE",
 ]
 app.get '/:command/:key', (req, res) ->
   c = req.param "command"
@@ -26,12 +27,27 @@ app.get '/:command/:key', (req, res) ->
   if c.toUpperCase() not in GET_COMMANDS
     res.status(400).write("unsupported command")
     return res.send()
-  db[c] key, (err, dbres) ->
-    res.send dbres
+
+  retrn = (err, dbres) ->
+    if not err
+      return res.send(dbres)
+    else
+      res.status(500)
+      return res.send(err.toString())
+
+  args = [key]
+  if req.query.args?
+    args.push.apply args, req.query.args.split ','
+  args.push retrn
+  console.log args
+  db[c].apply db, args
 
 
 POST_COMMANDS = [
-  "SET",
+  # Strings
+  "APPEND", "SET",
+  # Lists
+  "LPUSH",
 ]
 app.post '/:command/:key', (req, res) ->
   c = req.param "command"
@@ -40,12 +56,22 @@ app.post '/:command/:key', (req, res) ->
   if c.toUpperCase() not in POST_COMMANDS
     res.status(400).write("unsupported command")
     return res.send()
-  db[c] key, v, (err, dbres) ->
+
+  retrn = (err, dbres) ->
     if not err
       return res.send("true")
     else
       res.status(500)
       return res.send(err.toString())
+
+  if v instanceof Array
+    # create args for multiple values eg LPUSH
+    # http://stackoverflow.com/a/18094767/177293
+    v.unshift key
+    v.push retrn
+    db[c].apply db, v
+  else
+    db[c] key, v, retrn
 
 
 ###

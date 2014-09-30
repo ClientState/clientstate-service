@@ -28,25 +28,37 @@
     return _results;
   };
 
-  GET_COMMANDS = ["GET"];
+  GET_COMMANDS = ["GET", "LRANGE"];
 
   app.get('/:command/:key', function(req, res) {
-    var c, key, _ref;
+    var args, c, key, retrn, _ref;
     c = req.param("command");
     key = req.param("key");
     if (_ref = c.toUpperCase(), __indexOf.call(GET_COMMANDS, _ref) < 0) {
       res.status(400).write("unsupported command");
       return res.send();
     }
-    return db[c](key, function(err, dbres) {
-      return res.send(dbres);
-    });
+    retrn = function(err, dbres) {
+      if (!err) {
+        return res.send(dbres);
+      } else {
+        res.status(500);
+        return res.send(err.toString());
+      }
+    };
+    args = [key];
+    if (req.query.args != null) {
+      args.push.apply(args, req.query.args.split(','));
+    }
+    args.push(retrn);
+    console.log(args);
+    return db[c].apply(db, args);
   });
 
-  POST_COMMANDS = ["SET"];
+  POST_COMMANDS = ["APPEND", "SET", "LPUSH"];
 
   app.post('/:command/:key', function(req, res) {
-    var c, key, v, _ref;
+    var c, key, retrn, v, _ref;
     c = req.param("command");
     key = req.param("key");
     v = req.query["v"];
@@ -54,14 +66,21 @@
       res.status(400).write("unsupported command");
       return res.send();
     }
-    return db[c](key, v, function(err, dbres) {
+    retrn = function(err, dbres) {
       if (!err) {
         return res.send("true");
       } else {
         res.status(500);
         return res.send(err.toString());
       }
-    });
+    };
+    if (v instanceof Array) {
+      v.unshift(key);
+      v.push(retrn);
+      return db[c].apply(db, v);
+    } else {
+      return db[c](key, v, retrn);
+    }
   });
 
 
