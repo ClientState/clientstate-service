@@ -16,14 +16,36 @@ start = (context) ->
     r.context[k] = v
 
 
-app.get '/:command', (req, res) ->
+
+GET_COMMANDS = [
+  "GET",
+]
+app.get '/:command/:key', (req, res) ->
   c = req.param "command"
-  start
-    db: db
-    req: req
-    res: res
-    c: c
-  res.send "OK"
+  key = req.param "key"
+  if c.toUpperCase() not in GET_COMMANDS
+    res.status(400).write("unsupported command")
+    return res.send()
+  db[c] key, (err, dbres) ->
+    res.send dbres
+
+
+POST_COMMANDS = [
+  "SET",
+]
+app.post '/:command/:key', (req, res) ->
+  c = req.param "command"
+  key = req.param "key"
+  v = req.query["v"]
+  if c.toUpperCase() not in POST_COMMANDS
+    res.status(400).write("unsupported command")
+    return res.send()
+  db[c] key, v, (err, dbres) ->
+    if not err
+      return res.send("true")
+    else
+      res.status(500)
+      return res.send(err.toString())
 
 
 ###
