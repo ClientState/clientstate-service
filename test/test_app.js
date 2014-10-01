@@ -29,4 +29,20 @@
     });
   });
 
+  describe('LPUSH, LRANGE', function() {
+    db.flushall();
+    it('LRANGE needs args', function(done) {
+      return request(app).get('/lrange/baz').expect(500).expect(/wrong number of arguments/, done);
+    });
+    it('LRANGE returns empty list', function(done) {
+      return request(app).get('/lrange/baz?args=0,-1').expect('[]', done);
+    });
+    it('LPUSH returns true', function(done) {
+      return request(app).post('/lpush/baz').send('rawness').expect('true', done);
+    });
+    return it('LRANGE returns the value', function(done) {
+      return request(app).get('/lrange/baz?args=0,1').expect('["rawness"]', done);
+    });
+  });
+
 }).call(this);

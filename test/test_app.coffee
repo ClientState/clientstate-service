@@ -38,3 +38,29 @@ describe 'GET, SET, APPEND', () ->
     request(app)
       .get('/get/foobar')
       .expect("bazquux", done)
+
+describe 'LPUSH, LRANGE', () ->
+  db.flushall()
+
+  it 'LRANGE needs args', (done) ->
+    request(app)
+      .get('/lrange/baz')
+      # should be a 4XX?
+      .expect(500)
+      .expect(/wrong number of arguments/, done)
+
+  it 'LRANGE returns empty list', (done) ->
+    request(app)
+      .get('/lrange/baz?args=0,-1')
+      .expect('[]', done)
+
+  it 'LPUSH returns true', (done) ->
+    request(app)
+      .post('/lpush/baz')
+      .send('rawness')
+      .expect('true', done)
+
+  it 'LRANGE returns the value', (done) ->
+    request(app)
+      .get('/lrange/baz?args=0,1')
+      .expect('["rawness"]', done)
