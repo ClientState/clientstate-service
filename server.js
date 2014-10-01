@@ -15,6 +15,19 @@
 
   app.use(favicon("" + __dirname + "/public/favicon.ico"));
 
+  app.use(function(req, res, next) {
+    var data;
+    data = '';
+    req.setEncoding('utf8');
+    req.on('data', function(chunk) {
+      return data += chunk;
+    });
+    return req.on('end', function() {
+      req.rawBody = data;
+      return next();
+    });
+  });
+
   db = redis.createClient();
 
   start = function(context) {
@@ -51,7 +64,6 @@
       args.push.apply(args, req.query.args.split(','));
     }
     args.push(retrn);
-    console.log(args);
     return db[c].apply(db, args);
   });
 
@@ -61,7 +73,7 @@
     var c, key, retrn, v, _ref;
     c = req.param("command");
     key = req.param("key");
-    v = req.query["v"];
+    v = req.rawBody;
     if (_ref = c.toUpperCase(), __indexOf.call(POST_COMMANDS, _ref) < 0) {
       res.status(400).write("unsupported command");
       return res.send();
@@ -74,13 +86,27 @@
         return res.send(err.toString());
       }
     };
-    if (v instanceof Array) {
-      v.unshift(key);
-      v.push(retrn);
-      return db[c].apply(db, v);
-    } else {
-      return db[c](key, v, retrn);
-    }
+    return db[c](key, v, retrn);
+
+    /*
+     * string or object is LPUSHed as a string
+     * Array LPUSHs each member
+    if v instanceof Array
+      v = (JSON.stringify(m) for m in v)
+       * create args for multiple values eg LPUSH
+       * http://stackoverflow.com/a/18094767/177293
+      v.unshift key
+      v.push retrn
+      db[c].apply db, v
+    else
+       * http://stackoverflow.com/q/203739/177293
+      if v.constructor is String
+        console.log "STRING", v
+        db[c] key, v, retrn
+      else
+        console.log "NOT STRING", v
+        db[c] key, JSON.stringify(v), retrn
+     */
   });
 
 
