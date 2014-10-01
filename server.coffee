@@ -4,7 +4,6 @@ repl = require "repl"
 favicon = require "serve-favicon"
 
 
-
 app = express()
 app.use favicon "#{__dirname}/public/favicon.ico"
 # collect the rawBody
@@ -17,12 +16,10 @@ app.use (req, res, next) ->
     req.rawBody = data
     next()
 
-
-
 db = redis.createClient()
 
 
-start = (context) ->
+start_repl = (context) ->
   r = repl.start("> ")
   for k,v of context
     r.context[k] = v
@@ -77,36 +74,7 @@ app.post '/:command/:key', (req, res) ->
       return res.send(err.toString())
 
   db[c] key, v, retrn
-  # Only supporting single value for LPUSH
-  # trying to support multiple values as an option.
-  ###
-  # string or object is LPUSHed as a string
-  # Array LPUSHs each member
-  if v instanceof Array
-    v = (JSON.stringify(m) for m in v)
-    # create args for multiple values eg LPUSH
-    # http://stackoverflow.com/a/18094767/177293
-    v.unshift key
-    v.push retrn
-    db[c].apply db, v
-  else
-    # http://stackoverflow.com/q/203739/177293
-    if v.constructor is String
-      console.log "STRING", v
-      db[c] key, v, retrn
-    else
-      console.log "NOT STRING", v
-      db[c] key, JSON.stringify(v), retrn
-  ###
 
-
-###
-logErrors = (err, req, res, next) ->
-  console.error err.stack
-  next err
-
-app.use logErrors
-###
 
 server = app.listen 3000, () ->
   console.log 'Listening on port %d', server.address().port
