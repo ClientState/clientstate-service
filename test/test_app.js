@@ -45,13 +45,19 @@
     });
   });
 
-  describe('HGET, HSET', function() {
+  describe('HGET, HSET, HLEN, HKEYS', function() {
     db.flushall();
     it("HSET sets field's value", function(done) {
       return request(app).post('/hset/foo?field=bar').send('baz').expect(200).expect('true', done);
     });
-    return it('HGET returns value', function(done) {
+    it('HGET returns value', function(done) {
       return request(app).get('/hget/foo?field=bar').expect('baz', done);
+    });
+    it('HLEN returns length', function(done) {
+      return request(app).get('/hlen/foo').expect(200).expect('1', done);
+    });
+    return it('HKEYS returns keys', function(done) {
+      return request(app).get('/hkeys/foo').expect(200).expect('["bar"]', done);
     });
   });
 

@@ -30,7 +30,7 @@
     });
   });
 
-  GET_COMMANDS = ["GET", "LRANGE", "HGET"];
+  GET_COMMANDS = ["GET", "LRANGE", "HGET", "HLEN", "HKEYS"];
 
   app.get('/:command/:key', function(req, res) {
     var args, c, field, key, retrn, _ref;
@@ -43,6 +43,9 @@
     }
     retrn = function(err, dbres) {
       if (!err) {
+        if (parseInt(dbres) === dbres) {
+          dbres = dbres + "";
+        }
         return res.send(dbres);
       } else {
         res.status(500);

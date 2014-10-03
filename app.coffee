@@ -25,7 +25,7 @@ GET_COMMANDS = [
   # Lists
   "LRANGE",
   # Hashes,
-  "HGET",
+  "HGET", "HLEN", "HKEYS"
 ]
 app.get '/:command/:key', (req, res) ->
   c = req.param "command"
@@ -39,6 +39,10 @@ app.get '/:command/:key', (req, res) ->
 
   retrn = (err, dbres) ->
     if not err
+      # http://stackoverflow.com/a/3886106/177293
+      # #wat?
+      if parseInt(dbres) is dbres
+        dbres = dbres + ""
       return res.send(dbres)
     else
       res.status(500)

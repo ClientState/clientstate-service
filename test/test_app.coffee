@@ -65,7 +65,7 @@ describe 'LPUSH, LRANGE', () ->
       .get('/lrange/baz?args=0,1')
       .expect('["rawness"]', done)
 
-describe 'HGET, HSET', () ->
+describe 'HGET, HSET, HLEN, HKEYS', () ->
   db.flushall()
 
   it "HSET sets field's value", (done) ->
@@ -79,4 +79,18 @@ describe 'HGET, HSET', () ->
     request(app)
       .get('/hget/foo?field=bar')
       .expect('baz', done)
+
+  it 'HLEN returns length', (done) ->
+    request(app)
+      .get('/hlen/foo')
+      .expect(200)
+      .expect('1', done)
+
+  it 'HKEYS returns keys', (done) ->
+    request(app)
+      .get('/hkeys/foo')
+      .expect(200)
+      .expect('["bar"]', done)
+
+
 
