@@ -64,3 +64,19 @@ describe 'LPUSH, LRANGE', () ->
     request(app)
       .get('/lrange/baz?args=0,1')
       .expect('["rawness"]', done)
+
+describe 'HGET, HSET', () ->
+  db.flushall()
+
+  it "HSET sets field's value", (done) ->
+    request(app)
+      .post('/hset/foo?field=bar')
+      .send('baz')
+      .expect(200)
+      .expect('true', done)
+
+  it 'HGET returns value', (done) ->
+    request(app)
+      .get('/hget/foo?field=bar')
+      .expect('baz', done)
+

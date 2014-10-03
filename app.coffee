@@ -24,10 +24,15 @@ GET_COMMANDS = [
   "GET",
   # Lists
   "LRANGE",
+  # Hashes,
+  "HGET",
 ]
 app.get '/:command/:key', (req, res) ->
   c = req.param "command"
   key = req.param "key"
+  #start_repl
+  #  req: req
+  field = req.query.field
   if c.toUpperCase() not in GET_COMMANDS
     res.status(400).write("unsupported command")
     return res.send()
@@ -39,7 +44,10 @@ app.get '/:command/:key', (req, res) ->
       res.status(500)
       return res.send(err.toString())
 
-  args = [key]
+  if field?
+    args = [key, field]
+  else
+    args = [key]
   if req.query.args?
     args.push.apply args, req.query.args.split ','
   args.push retrn
@@ -51,10 +59,13 @@ POST_COMMANDS = [
   "APPEND", "SET",
   # Lists
   "LPUSH",
+  # Hashes
+  "HSET",
 ]
 app.post '/:command/:key', (req, res) ->
   c = req.param "command"
   key = req.param "key"
+  field = req.query.field
   v = req.rawBody
   #console.log c, key, v
 
@@ -69,6 +80,10 @@ app.post '/:command/:key', (req, res) ->
       res.status(500)
       return res.send(err.toString())
 
-  db[c] key, v, retrn
+  if field?
+    args = [key, field, v, retrn]
+  else
+    args = [key, v, retrn]
+  db[c].apply db, args
 
 module.exports.app = app

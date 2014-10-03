@@ -45,4 +45,14 @@
     });
   });
 
+  describe('HGET, HSET', function() {
+    db.flushall();
+    it("HSET sets field's value", function(done) {
+      return request(app).post('/hset/foo?field=bar').send('baz').expect(200).expect('true', done);
+    });
+    return it('HGET returns value', function(done) {
+      return request(app).get('/hget/foo?field=bar').expect('baz', done);
+    });
+  });
+
 }).call(this);

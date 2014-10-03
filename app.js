@@ -30,12 +30,13 @@
     });
   });
 
-  GET_COMMANDS = ["GET", "LRANGE"];
+  GET_COMMANDS = ["GET", "LRANGE", "HGET"];
 
   app.get('/:command/:key', function(req, res) {
-    var args, c, key, retrn, _ref;
+    var args, c, field, key, retrn, _ref;
     c = req.param("command");
     key = req.param("key");
+    field = req.query.field;
     if (_ref = c.toUpperCase(), __indexOf.call(GET_COMMANDS, _ref) < 0) {
       res.status(400).write("unsupported command");
       return res.send();
@@ -48,7 +49,11 @@
         return res.send(err.toString());
       }
     };
-    args = [key];
+    if (field != null) {
+      args = [key, field];
+    } else {
+      args = [key];
+    }
     if (req.query.args != null) {
       args.push.apply(args, req.query.args.split(','));
     }
@@ -56,12 +61,13 @@
     return db[c].apply(db, args);
   });
 
-  POST_COMMANDS = ["APPEND", "SET", "LPUSH"];
+  POST_COMMANDS = ["APPEND", "SET", "LPUSH", "HSET"];
 
   app.post('/:command/:key', function(req, res) {
-    var c, key, retrn, v, _ref;
+    var args, c, field, key, retrn, v, _ref;
     c = req.param("command");
     key = req.param("key");
+    field = req.query.field;
     v = req.rawBody;
     if (_ref = c.toUpperCase(), __indexOf.call(POST_COMMANDS, _ref) < 0) {
       res.status(400).write("unsupported command");
@@ -75,7 +81,12 @@
         return res.send(err.toString());
       }
     };
-    return db[c](key, v, retrn);
+    if (field != null) {
+      args = [key, field, v, retrn];
+    } else {
+      args = [key, v, retrn];
+    }
+    return db[c].apply(db, args);
   });
 
   module.exports.app = app;
