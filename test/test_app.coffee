@@ -74,6 +74,30 @@ describe 'GITHUB AUTH', () ->
         .expect(403, done)
 
 
+describe 'KEYS - DEL, EXISTS', () ->
+  resetdb()
+  it 'EXISTS returns 1 for existing key', (done) ->
+    db.set('beans', 'pork')
+    request(app)
+      .get('/exists/beans')
+      .set({"access_token": "TESTTOKEN"})
+      .expect(200)
+      .expect("1", done)
+  it 'DEL returns true', (done) ->
+    request(app)
+      .post('/del/beans')
+      .set({"access_token": "TESTTOKEN"})
+      .expect(200)
+      .expect("true", done)
+  it 'EXISTS now returns 0', (done) ->
+    request(app)
+      .get('/exists/beans')
+      .set({"access_token": "TESTTOKEN"})
+      .expect(200)
+      .expect("0", done)
+
+
+
 describe 'GET, SET, APPEND', () ->
   resetdb()
 

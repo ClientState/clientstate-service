@@ -73,6 +73,26 @@
     }
   });
 
+  describe('KEYS - DEL, EXISTS', function() {
+    resetdb();
+    it('EXISTS returns 1 for existing key', function(done) {
+      db.set('beans', 'pork');
+      return request(app).get('/exists/beans').set({
+        "access_token": "TESTTOKEN"
+      }).expect(200).expect("1", done);
+    });
+    it('DEL returns true', function(done) {
+      return request(app).post('/del/beans').set({
+        "access_token": "TESTTOKEN"
+      }).expect(200).expect("true", done);
+    });
+    return it('EXISTS now returns 0', function(done) {
+      return request(app).get('/exists/beans').set({
+        "access_token": "TESTTOKEN"
+      }).expect(200).expect("0", done);
+    });
+  });
+
   describe('GET, SET, APPEND', function() {
     resetdb();
     it('GET returns an empty response', function(done) {
