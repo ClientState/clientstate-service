@@ -64,11 +64,13 @@
         "access_token": "TESTTOKEN"
       }).expect(403, done);
     });
-    return it('calls github with invalid token and rejects', function(done) {
-      return request(app).get("/get/foobar").set({
-        "access_token": "NOWAYTHISISAREALTOKEN"
-      }).expect(403, done);
-    });
+    if (process.env.TEST_USE_NETWORK) {
+      return it('calls github with invalid token and rejects', function(done) {
+        return request(app).get("/get/foobar").set({
+          "access_token": "NOWAYTHISISAREALTOKEN"
+        }).expect(403, done);
+      });
+    }
   });
 
   describe('GET, SET, APPEND', function() {

@@ -66,11 +66,12 @@ describe 'GITHUB AUTH', () ->
       .expect(403, done)
 
   # this one requires network access, hrm.
-  it 'calls github with invalid token and rejects', (done) ->
-    request(app)
-      .get("/get/foobar")
-      .set({"access_token": "NOWAYTHISISAREALTOKEN"})
-      .expect(403, done)
+  if process.env.TEST_USE_NETWORK
+    it 'calls github with invalid token and rejects', (done) ->
+      request(app)
+        .get("/get/foobar")
+        .set({"access_token": "NOWAYTHISISAREALTOKEN"})
+        .expect(403, done)
 
 
 describe 'GET, SET, APPEND', () ->
