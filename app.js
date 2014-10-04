@@ -96,7 +96,7 @@
     });
   });
 
-  GET_COMMANDS = ["GET", "LRANGE", "HGET", "HLEN", "HKEYS"];
+  GET_COMMANDS = ["EXISTS", "GET", "LRANGE", "HGET", "HLEN", "HKEYS"];
 
   app.get('/:command/:key', function(req, res) {
     var args, c, field, key, retrn, _ref;
@@ -134,7 +134,7 @@
     return db[c].apply(db, args);
   });
 
-  POST_COMMANDS = ["APPEND", "SET", "LPUSH", "HSET"];
+  POST_COMMANDS = ["DEL", "APPEND", "SET", "LPUSH", "HSET"];
 
   app.post('/:command/:key', function(req, res) {
     var args, c, field, key, retrn, v, _ref;

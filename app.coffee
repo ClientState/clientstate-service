@@ -74,6 +74,9 @@ app.use (req, res, next) ->
 
 
 GET_COMMANDS = [
+  # Keys
+  "EXISTS",
+  # Strings
   "GET",
   # Lists
   "LRANGE",
@@ -115,6 +118,8 @@ app.get '/:command/:key', (req, res) ->
 
 
 POST_COMMANDS = [
+  # Keys
+  "DEL",
   # Strings
   "APPEND", "SET",
   # Lists
