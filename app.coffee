@@ -44,7 +44,6 @@ app.use (req, res, next) ->
       res.status(500).write(err.toString())
       return res.send()
     if ismemberres is 1
-      console.log "ISMEMBER"
       next()
       return
     # not in our set
@@ -75,7 +74,7 @@ app.use (req, res, next) ->
 
 GET_COMMANDS = [
   # Keys
-  "EXISTS",
+  "EXISTS", "DUMP",
   # Strings
   "GET",
   # Lists

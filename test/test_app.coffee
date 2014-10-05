@@ -74,7 +74,7 @@ describe 'GITHUB AUTH', () ->
         .expect(403, done)
 
 
-describe 'KEYS - DEL, EXISTS', () ->
+describe 'KEYS - DEL, EXISTS, DUMP', () ->
   resetdb()
   it 'EXISTS returns 1 for existing key', (done) ->
     db.set('beans', 'pork')
@@ -95,6 +95,15 @@ describe 'KEYS - DEL, EXISTS', () ->
       .set({"access_token": "TESTTOKEN"})
       .expect(200)
       .expect("0", done)
+  it 'DUMP returns serialized hash', (done) ->
+    db.hset('myhash', 'mykey', 'quux')
+    request(app)
+      .get('/dump/myhash')
+      .set({"access_token": "TESTTOKEN"})
+      .expect(200, done)
+      # this is redis binary format, not json
+      #.expect('{"mykey": "quux"}', done)
+
 
 
 

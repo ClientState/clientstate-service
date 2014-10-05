@@ -73,7 +73,7 @@
     }
   });
 
-  describe('KEYS - DEL, EXISTS', function() {
+  describe('KEYS - DEL, EXISTS, DUMP', function() {
     resetdb();
     it('EXISTS returns 1 for existing key', function(done) {
       db.set('beans', 'pork');
@@ -86,10 +86,16 @@
         "access_token": "TESTTOKEN"
       }).expect(200).expect("true", done);
     });
-    return it('EXISTS now returns 0', function(done) {
+    it('EXISTS now returns 0', function(done) {
       return request(app).get('/exists/beans').set({
         "access_token": "TESTTOKEN"
       }).expect(200).expect("0", done);
+    });
+    return it('DUMP returns serialized hash', function(done) {
+      db.hset('myhash', 'mykey', 'quux');
+      return request(app).get('/dump/myhash').set({
+        "access_token": "TESTTOKEN"
+      }).expect(200, done);
     });
   });
 

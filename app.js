@@ -62,7 +62,6 @@
         return res.send();
       }
       if (ismemberres === 1) {
-        console.log("ISMEMBER");
         next();
       } else {
         options = {
@@ -96,7 +95,7 @@
     });
   });
 
-  GET_COMMANDS = ["EXISTS", "GET", "LRANGE", "HGET", "HLEN", "HKEYS"];
+  GET_COMMANDS = ["EXISTS", "DUMP", "GET", "LRANGE", "HGET", "HLEN", "HKEYS"];
 
   app.get('/:command/:key', function(req, res) {
     var args, c, field, key, retrn, _ref;
