@@ -1,11 +1,9 @@
 express = require "express"
-repl = require "repl"
 favicon = require "serve-favicon"
 https = require "https"
 
 # node_redis client
 {db} = require "./db"
-{start_repl} = require "./repl"
 {GITHUB_TOKEN_SET, GITHUB_AUTH_HASH, RESTRICTED_KEYS} = require "./constants"
 require "./ghev"
 #global.gh = gh
@@ -75,7 +73,7 @@ app.use (req, res, next) ->
 
 GET_COMMANDS = [
   # Keys
-  "EXISTS", "DUMP",
+  "EXISTS", "DUMP", "PTTL",
   # Strings
   "GET",
   # Lists
@@ -89,9 +87,6 @@ app.get '/:command/:key', (req, res) ->
   if key in RESTRICTED_KEYS
     res.status(403).write("no.")
     return res.send()
-  #start_repl
-  #  req: req
-  field = req.query.field
   if c.toUpperCase() not in GET_COMMANDS
     res.status(400).write("unsupported command")
     return res.send()
@@ -107,10 +102,7 @@ app.get '/:command/:key', (req, res) ->
       res.status(500)
       return res.send(err.toString())
 
-  if field?
-    args = [key, field]
-  else
-    args = [key]
+  args = [key]
   if req.query.args?
     args.push.apply args, req.query.args.split ','
   args.push retrn
@@ -119,7 +111,7 @@ app.get '/:command/:key', (req, res) ->
 
 POST_COMMANDS = [
   # Keys
-  "DEL",
+  "DEL", "RESTORE", "EXPIRE", "PEXPIRE",
   # Strings
   "APPEND", "SET",
   # Lists
@@ -130,8 +122,6 @@ POST_COMMANDS = [
 app.post '/:command/:key', (req, res) ->
   c = req.param "command"
   key = req.param "key"
-
-  field = req.query.field
   v = req.rawBody
 
   if c.toUpperCase() not in POST_COMMANDS
@@ -145,10 +135,10 @@ app.post '/:command/:key', (req, res) ->
       res.status(500)
       return res.send(err.toString())
 
-  if field?
-    args = [key, field, v, retrn]
-  else
-    args = [key, v, retrn]
+  args = [key]
+  if req.query.args?
+    args.push.apply args, req.query.args.split ','
+  args.push.apply args, [v, retrn]
   db[c].apply db, args
 
 module.exports.app = app

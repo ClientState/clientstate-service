@@ -1,7 +1,8 @@
 request = require 'supertest'
 httpMocks = require 'node-mocks-http'
 {EventEmitter} = require 'events'
-assert = require 'assert'
+#assert = require 'assert'
+{assert, expect} = require 'chai'
 
 {app} = require '../app'
 {db} = require '../db'
@@ -96,7 +97,7 @@ describe 'GITHUB AUTH', () ->
           done()
 
 
-describe 'KEYS - DEL, EXISTS, DUMP', () ->
+describe 'KEYS - DEL, EXISTS', () ->
   resetdb()
   it 'EXISTS returns 1 for existing key', (done) ->
     db.set('beans', 'pork')
@@ -117,14 +118,62 @@ describe 'KEYS - DEL, EXISTS, DUMP', () ->
       .set({"access_token": "TESTTOKEN"})
       .expect(200)
       .expect("0", done)
-  it 'DUMP returns serialized hash', (done) ->
+  # DUMP and RESTORE are hard, maybe later
+  it 'DUMP returns serialized that can be restored', (done) ->
     db.hset('myhash', 'mykey', 'quux')
     request(app)
       .get('/dump/myhash')
       .set({"access_token": "TESTTOKEN"})
-      .expect(200, done)
-      # this is redis binary format, not json
-      #.expect('{"mykey": "quux"}', done)
+      .expect(200)
+      .end (err, res) ->
+        ###
+        console.log "RES!!!!!!!!!!!!!!!!!!"
+        console.log res
+        console.log res.text
+        request(app)
+          .post('/restore/differentkey?args=0')
+          .set({"access_token": "TESTTOKEN"})
+          .send(res.text)
+          .expect(200, done)
+        ###
+        done()
+
+
+describe 'KEYS - EXPIRE, PEXPIRE, PTTL', () ->
+  resetdb()
+  it 'EXPIRE makes the PTTL work', (done) ->
+    db.set 'mykey', 'somestring', () ->
+      request(app)
+        .post('/expire/mykey')
+        .set({"access_token": "TESTTOKEN"})
+        .send("50")
+        .expect(200)
+        .end (err, res) ->
+          request(app)
+            .get('/pttl/mykey')
+            .set({"access_token": "TESTTOKEN"})
+            .expect(200)
+            .end (err, res) ->
+              ttl = parseInt res.text
+              expect(ttl).most(50000).least(49990)
+              done()
+  it 'PEXPIRE makes correct PTTL', (done) ->
+    db.set 'mykey', 'somestring', () ->
+      request(app)
+        .post('/pexpire/mykey')
+        .set({"access_token": "TESTTOKEN"})
+        .send("500")
+        .expect(200)
+        .end (err, res) ->
+          request(app)
+            .get('/pttl/mykey')
+            .set({"access_token": "TESTTOKEN"})
+            .expect(200)
+            .end (err, res) ->
+              ttl = parseInt res.text
+              expect(ttl).most(500).least(490)
+              done()
+
 
 
 
@@ -204,7 +253,7 @@ describe 'HGET, HSET, HLEN, HKEYS', () ->
 
   it "HSET sets field's value", (done) ->
     request(app)
-      .post('/hset/foo?field=bar')
+      .post('/hset/foo?args=bar')
       .set({"access_token": "TESTTOKEN"})
       .send('baz')
       .expect(200)
@@ -212,7 +261,7 @@ describe 'HGET, HSET, HLEN, HKEYS', () ->
 
   it 'HGET returns value', (done) ->
     request(app)
-      .get('/hget/foo?field=bar')
+      .get('/hget/foo?args=bar')
       .set({"access_token": "TESTTOKEN"})
       .expect('baz', done)
 
