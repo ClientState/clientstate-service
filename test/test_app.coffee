@@ -1,43 +1,47 @@
 request = require 'supertest'
+httpMocks = require 'node-mocks-http'
+{EventEmitter} = require 'events'
+assert = require 'assert'
 
-app = require('../app').app
-db = require('../db').db
+{app} = require '../app'
+{db} = require '../db'
+{GITHUB_TOKEN_SET, GITHUB_AUTH_HASH} = require '../constants'
 
-GITHUB_TOKEN_SET = require('../app').GITHUB_TOKEN_SET
-GITHUB_AUTH_HASH = require('../app').GITHUB_AUTH_HASH
 
-skyl = {
-  "login": "skyl",
-  "id": 61438,
-  "avatar_url": "https://avatars.githubusercontent.com/u/61438?v=2",
-  "gravatar_id": "",
-  "url": "https://api.github.com/users/skyl",
-  "html_url": "https://github.com/skyl",
-  "followers_url": "https://api.github.com/users/skyl/followers",
-  "following_url": "https://api.github.com/users/skyl/following{/other_user}",
-  "gists_url": "https://api.github.com/users/skyl/gists{/gist_id}",
-  "starred_url": "https://api.github.com/users/skyl/starred{/owner}{/repo}",
-  "subscriptions_url": "https://api.github.com/users/skyl/subscriptions",
-  "organizations_url": "https://api.github.com/users/skyl/orgs",
-  "repos_url": "https://api.github.com/users/skyl/repos",
-  "events_url": "https://api.github.com/users/skyl/events{/privacy}",
-  "received_events_url": "https://api.github.com/users/skyl/received_events",
-  "type": "User",
-  "site_admin": false,
-  "name": "Skylar Saveland",
-  "company": "JPMorgan Chase",
-  "blog": "http://skyl.org/",
-  "location": "San Francisco",
-  "email": "skylar.saveland@gmail.com",
-  "hireable": true,
-  "bio": null,
-  "public_repos": 101,
-  "public_gists": 30,
-  "followers": 56,
-  "following": 125,
-  "created_at": "2009-03-09T01:41:19Z",
-  "updated_at": "2014-10-02T05:07:10Z"
-}
+skyl =
+  "login": "skyl"
+  "id": 61438
+
+
+class MockResponse extends EventEmitter
+  constructor: (@statusCode, body) ->
+    self = this
+    setTimeout(() ->
+      self.emit "data", body
+      self.emit "end"
+    , 1)
+
+
+class MockGithub extends EventEmitter
+  eventListeners: {}
+  emitCounts: {}
+  constructor: ->
+    @on 'requestToken', @requestToken
+    @on 'receiveAccessToken', @receiveAccessToken
+  requestToken: (req, res, cb) =>
+    @emitCounts['requestToken'] ?= 0
+    @emitCounts['requestToken']++
+    cb(new MockResponse(200, '{"access_token": "boom"}'))
+  receiveAccessToken: (access_token, cb) ->
+    @emitCounts['receiveAccessToken'] ?= 0
+    @emitCounts['receiveAccessToken']++
+    db.sadd GITHUB_TOKEN_SET, access_token
+    db.hset GITHUB_AUTH_HASH, access_token, JSON.stringify(skyl)
+    cb()
+
+# nice article
+# pragprog.com decouple-your-apps-with-eventdriven-coffeescript
+global.gh = new MockGithub
 
 
 resetdb = () ->
@@ -79,13 +83,17 @@ describe 'GITHUB AUTH', () ->
       .get("/get/baz?access_token=TESTTOKEN")
       .expect(200, done)
 
-  #if process.env.TEST_USE_NETWORK
-    # test against the real GITHUB API. hrm.
-    # must have valid env variables for -
-    #   client_id = process.env.GITHUB_CLIENT_ID
-    #   client_secret = process.env.GITHUB_CLIENT_SECRET
-
-
+  it 'emits events when /auth_callback is called', (done) ->
+    request(app)
+      .get("/auth_callback?code=thisisgreat")
+      .expect(200)
+      .expect("OK")
+      .end () ->
+        assert.equal gh.emitCounts["requestToken"], 1
+        assert.equal gh.emitCounts["receiveAccessToken"], 1
+        db.sismember GITHUB_TOKEN_SET, "boom", (err, dbres) ->
+          assert.equal dbres, 1
+          done()
 
 
 describe 'KEYS - DEL, EXISTS, DUMP', () ->

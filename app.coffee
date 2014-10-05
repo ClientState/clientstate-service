@@ -2,14 +2,20 @@ express = require "express"
 repl = require "repl"
 favicon = require "serve-favicon"
 https = require "https"
-querystring = require "querystring"
 
 # node_redis client
-db = require("./db").db
-start_repl = require("./repl").start_repl
+{db} = require "./db"
+{start_repl} = require "./repl"
+{GITHUB_TOKEN_SET, GITHUB_AUTH_HASH, RESTRICTED_KEYS} = require "./constants"
+require "./ghev"
+#global.gh = gh
 
 app = express()
+
+
 app.use favicon "#{__dirname}/public/favicon.ico"
+
+
 # collect the rawBody
 app.use (req, res, next) ->
   data = ''
@@ -20,77 +26,32 @@ app.use (req, res, next) ->
     req.rawBody = data
     next()
 
-GITHUB_TOKEN_SET = "__github_token_set"
-GITHUB_AUTH_HASH = "__github_auth_hash"
-RESTRICTED_KEYS = [
-  GITHUB_TOKEN_SET,
-  GITHUB_AUTH_HASH,
-]
 
 app.get '/auth_callback', (req, res) ->
-  code = req.query.code
-  # when we build the app in the docker,
-  # we set these parameters.
-  client_id = process.env.GITHUB_CLIENT_ID
-  client_secret = process.env.GITHUB_CLIENT_SECRET
-  console.log code, client_id, client_secret
-
-  post_data = querystring.stringify {
-    code: code
-    client_id: client_id
-    client_secret: client_secret
-  }
-  options =
-    method: 'POST'
-    host: 'github.com'
-    path: '/login/oauth/access_token'
-    headers: {
-      "User-Agent": "skyl/hello-express"
-      "Accept": "application/json"
-    }
   cb = (gh_response) ->
-    console.log "POST callback!"
     str = ''
     gh_response.on 'data', (chunk) ->
       str += chunk
     gh_response.on 'end', () ->
-      console.log str
       if gh_response.statusCode is 200
-        console.log "SAVING FROM GITHUB!"
         access_token = JSON.parse(str).access_token
-        db.sadd GITHUB_TOKEN_SET, access_token
-
-        options =
-          host: 'api.github.com'
-          path: "/user?access_token=#{access_token}"
-          headers: {
-            "User-Agent": "skyl/hello-express"
-          }
-        user_req = https.request options, (gh_response) ->
-          str = ''
-          gh_response.on 'data', (chunk) -> str += chunk
-          gh_response.on 'end', () ->
-            console.log str
-            db.hset GITHUB_AUTH_HASH, access_token, str
-        user_req.end()
-        res.status(200).write("OK")
-        return res.send()
+        gh.emit 'receiveAccessToken', access_token, () ->
+          res.status(200).write("OK")
+          res.send()
       else
-        res.status(403).write("Invalid")
+        res.status(gh_response.statusCode).write(str)
         return res.send()
-  req = https.request(options, cb)
-  req.write post_data
-  req.end()
+  gh.emit "requestToken", req, res, cb
 
 
-
-
+# block calls to restricted keys
 app.use (req, res, next) ->
   key = req.param "key"
   if key in RESTRICTED_KEYS
     res.status(403).write("no.")
     return res.send()
   next()
+
 
 # authenticate with github token
 app.use (req, res, next) ->
@@ -191,5 +152,3 @@ app.post '/:command/:key', (req, res) ->
   db[c].apply db, args
 
 module.exports.app = app
-module.exports.GITHUB_TOKEN_SET = GITHUB_TOKEN_SET
-module.exports.GITHUB_AUTH_HASH = GITHUB_AUTH_HASH
