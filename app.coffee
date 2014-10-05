@@ -2,6 +2,7 @@ express = require "express"
 repl = require "repl"
 favicon = require "serve-favicon"
 https = require "https"
+querystring = require "querystring"
 
 # node_redis client
 db = require("./db").db
@@ -25,6 +26,65 @@ RESTRICTED_KEYS = [
   GITHUB_TOKEN_SET,
   GITHUB_AUTH_HASH,
 ]
+
+app.get '/auth_callback', (req, res) ->
+  code = req.query.code
+  # when we build the app in the docker,
+  # we set these parameters.
+  client_id = process.env.GITHUB_CLIENT_ID
+  client_secret = process.env.GITHUB_CLIENT_SECRET
+  console.log code, client_id, client_secret
+
+  post_data = querystring.stringify {
+    code: code
+    client_id: client_id
+    client_secret: client_secret
+  }
+  options =
+    method: 'POST'
+    host: 'github.com'
+    path: '/login/oauth/access_token'
+    headers: {
+      "User-Agent": "skyl/hello-express"
+      "Accept": "application/json"
+    }
+  cb = (gh_response) ->
+    console.log "POST callback!"
+    str = ''
+    gh_response.on 'data', (chunk) ->
+      str += chunk
+    gh_response.on 'end', () ->
+      console.log str
+      if gh_response.statusCode is 200
+        console.log "SAVING FROM GITHUB!"
+        access_token = JSON.parse(str).access_token
+        db.sadd GITHUB_TOKEN_SET, access_token
+
+        options =
+          host: 'api.github.com'
+          path: "/user?access_token=#{access_token}"
+          headers: {
+            "User-Agent": "skyl/hello-express"
+          }
+        user_req = https.request options, (gh_response) ->
+          str = ''
+          gh_response.on 'data', (chunk) -> str += chunk
+          gh_response.on 'end', () ->
+            console.log str
+            db.hset GITHUB_AUTH_HASH, access_token, str
+        user_req.end()
+        res.status(200).write("OK")
+        return res.send()
+      else
+        res.status(403).write("Invalid")
+        return res.send()
+  req = https.request(options, cb)
+  req.write post_data
+  req.end()
+
+
+
+
 app.use (req, res, next) ->
   key = req.param "key"
   if key in RESTRICTED_KEYS
@@ -48,28 +108,8 @@ app.use (req, res, next) ->
       return
     # not in our set
     else
-      options =
-        host: 'api.github.com'
-        path: "/user?access_token=#{token}"
-        headers: {
-          "User-Agent": "skyl/hello-express"
-        }
-      cb = (gh_response) ->
-        str = ''
-        gh_response.on 'data', (chunk) ->
-          str += chunk
-        gh_response.on 'end', () ->
-          console.log str
-        if gh_response.statusCode is 200
-          console.log "SAVING FROM GITHUB!"
-          db.sadd GITHUB_TOKEN_SET, token
-          db.hset GITHUB_AUTH_HASH, token, str
-          next()
-          return
-        else
-          res.status(403).write("Invalid")
-          return res.send()
-      https.request(options, cb).end()
+      res.status(403).write("Invalid")
+      return res.send()
 
 
 GET_COMMANDS = [

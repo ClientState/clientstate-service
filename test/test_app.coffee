@@ -65,13 +65,27 @@ describe 'GITHUB AUTH', () ->
       .set({"access_token": "TESTTOKEN"})
       .expect(403, done)
 
-  # this one requires network access, hrm.
-  if process.env.TEST_USE_NETWORK
-    it 'calls github with invalid token and rejects', (done) ->
-      request(app)
-        .get("/get/foobar")
-        .set({"access_token": "NOWAYTHISISAREALTOKEN"})
-        .expect(403, done)
+  it 'rejects invalid token', (done) ->
+    request(app)
+      .get("/get/foobar")
+      .set({"access_token": "NOWAYTHISISAREALTOKEN"})
+      .expect(403, done)
+  it 'reject invalid token in querystring', (done) ->
+    request(app)
+      .get("/get/foobar?access_token=WRONGE")
+      .expect(403, done)
+  it 'allows call with token in querystring', (done) ->
+    request(app)
+      .get("/get/baz?access_token=TESTTOKEN")
+      .expect(200, done)
+
+  #if process.env.TEST_USE_NETWORK
+    # test against the real GITHUB API. hrm.
+    # must have valid env variables for -
+    #   client_id = process.env.GITHUB_CLIENT_ID
+    #   client_secret = process.env.GITHUB_CLIENT_SECRET
+
+
 
 
 describe 'KEYS - DEL, EXISTS, DUMP', () ->
