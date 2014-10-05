@@ -1,7 +1,5 @@
 request = require 'supertest'
-httpMocks = require 'node-mocks-http'
 {EventEmitter} = require 'events'
-#assert = require 'assert'
 {assert, expect} = require 'chai'
 
 {app} = require '../app'

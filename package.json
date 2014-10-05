@@ -4,6 +4,8 @@
   "version": "0.0.1",
   "private": true,
   "dependencies": {
+    "chai": "^1.9.2",
+    "events": "^1.0.2",
     "express": "4.x",
     "redis": "^0.12.1",
     "repl": "^0.1.3",
