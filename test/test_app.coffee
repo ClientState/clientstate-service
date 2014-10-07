@@ -104,12 +104,12 @@ describe 'KEYS - DEL, EXISTS', () ->
       .set({"access_token": "TESTTOKEN"})
       .expect(200)
       .expect("1", done)
-  it 'DEL returns true', (done) ->
+  it 'DEL returns 1', (done) ->
     request(app)
       .post('/del/beans')
       .set({"access_token": "TESTTOKEN"})
       .expect(200)
-      .expect("true", done)
+      .expect("1", done)
   it 'EXISTS now returns 0', (done) ->
     request(app)
       .get('/exists/beans')
@@ -173,6 +173,20 @@ describe 'KEYS - EXPIRE, PEXPIRE, PTTL', () ->
               done()
 
 
+describe 'KEYS - INCR, DECR', (done) ->
+  resetdb()
+  it 'INCR empty key returns 1, DECR -> 0', () ->
+    request(app)
+      .post('/incr/somekey')
+      .set({"access_token": "TESTTOKEN"})
+      .expect(200)
+      .expect("1")
+      .end (err, res) ->
+        request(app)
+          .post('/decr/somekey')
+          .set({"access_token": "TESTTOKEN"})
+          .expect(200)
+          .expect("0", done)
 
 
 
@@ -186,13 +200,13 @@ describe 'GET, SET, APPEND', () ->
       .expect(200)
       .expect("", done)
 
-  it 'SET returns true', (done) ->
+  it 'SET returns OK', (done) ->
     request(app)
       .post('/set/foobar')
       .set({"access_token": "TESTTOKEN"})
       .send('baz')
       .expect(200)
-      .expect("true", done)
+      .expect("OK", done)
 
   it 'GET returns the stored value', (done) ->
     request(app)
@@ -201,12 +215,12 @@ describe 'GET, SET, APPEND', () ->
       .expect(200)
       .expect("baz", done)
 
-  it 'APPEND returns true', (done) ->
+  it 'APPEND returns 7 (length)', (done) ->
     request(app)
       .post('/append/foobar')
       .set({"access_token": "TESTTOKEN"})
       .send('quux')
-      .expect("true", done)
+      .expect("7", done)
 
   it 'GET returns the appended value', (done) ->
     request(app)
@@ -232,12 +246,12 @@ describe 'LPUSH, LRANGE', () ->
       .set({"access_token": "TESTTOKEN"})
       .expect('[]', done)
 
-  it 'LPUSH returns true', (done) ->
+  it 'LPUSH returns 1', (done) ->
     request(app)
       .post('/lpush/baz')
       .set({"access_token": "TESTTOKEN"})
       .send('rawness')
-      .expect('true', done)
+      .expect('1', done)
 
   it 'LRANGE returns the value', (done) ->
     request(app)
@@ -255,7 +269,7 @@ describe 'HGET, HSET, HLEN, HKEYS', () ->
       .set({"access_token": "TESTTOKEN"})
       .send('baz')
       .expect(200)
-      .expect('true', done)
+      .expect('1', done)
 
   it 'HGET returns value', (done) ->
     request(app)

@@ -128,10 +128,10 @@
         "access_token": "TESTTOKEN"
       }).expect(200).expect("1", done);
     });
-    it('DEL returns true', function(done) {
+    it('DEL returns 1', function(done) {
       return request(app).post('/del/beans').set({
         "access_token": "TESTTOKEN"
-      }).expect(200).expect("true", done);
+      }).expect(200).expect("1", done);
     });
     it('EXISTS now returns 0', function(done) {
       return request(app).get('/exists/beans').set({
@@ -195,6 +195,19 @@
     });
   });
 
+  describe('KEYS - INCR, DECR', function(done) {
+    resetdb();
+    return it('INCR empty key returns 1, DECR -> 0', function() {
+      return request(app).post('/incr/somekey').set({
+        "access_token": "TESTTOKEN"
+      }).expect(200).expect("1").end(function(err, res) {
+        return request(app).post('/decr/somekey').set({
+          "access_token": "TESTTOKEN"
+        }).expect(200).expect("0", done);
+      });
+    });
+  });
+
   describe('GET, SET, APPEND', function() {
     resetdb();
     it('GET returns an empty response', function(done) {
@@ -202,20 +215,20 @@
         "access_token": "TESTTOKEN"
       }).expect(200).expect("", done);
     });
-    it('SET returns true', function(done) {
+    it('SET returns OK', function(done) {
       return request(app).post('/set/foobar').set({
         "access_token": "TESTTOKEN"
-      }).send('baz').expect(200).expect("true", done);
+      }).send('baz').expect(200).expect("OK", done);
     });
     it('GET returns the stored value', function(done) {
       return request(app).get('/get/foobar').set({
         "access_token": "TESTTOKEN"
       }).expect(200).expect("baz", done);
     });
-    it('APPEND returns true', function(done) {
+    it('APPEND returns 7 (length)', function(done) {
       return request(app).post('/append/foobar').set({
         "access_token": "TESTTOKEN"
-      }).send('quux').expect("true", done);
+      }).send('quux').expect("7", done);
     });
     return it('GET returns the appended value', function(done) {
       return request(app).get('/get/foobar').set({
@@ -236,10 +249,10 @@
         "access_token": "TESTTOKEN"
       }).expect('[]', done);
     });
-    it('LPUSH returns true', function(done) {
+    it('LPUSH returns 1', function(done) {
       return request(app).post('/lpush/baz').set({
         "access_token": "TESTTOKEN"
-      }).send('rawness').expect('true', done);
+      }).send('rawness').expect('1', done);
     });
     return it('LRANGE returns the value', function(done) {
       return request(app).get('/lrange/baz?args=0,1').set({
@@ -253,7 +266,7 @@
     it("HSET sets field's value", function(done) {
       return request(app).post('/hset/foo?args=bar').set({
         "access_token": "TESTTOKEN"
-      }).send('baz').expect(200).expect('true', done);
+      }).send('baz').expect(200).expect('1', done);
     });
     it('HGET returns value', function(done) {
       return request(app).get('/hget/foo?args=bar').set({

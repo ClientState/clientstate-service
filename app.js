@@ -121,7 +121,7 @@
     return db[c].apply(db, args);
   });
 
-  POST_COMMANDS = ["DEL", "RESTORE", "EXPIRE", "PEXPIRE", "APPEND", "SET", "LPUSH", "HSET"];
+  POST_COMMANDS = ["DEL", "RESTORE", "EXPIRE", "PEXPIRE", "INCR", "DECR", "APPEND", "SET", "LPUSH", "HSET"];
 
   app.post('/:command/:key', function(req, res) {
     var args, c, key, retrn, v, _ref1;
@@ -134,7 +134,7 @@
     }
     retrn = function(err, dbres) {
       if (!err) {
-        return res.send("true");
+        return res.send((dbres + "") || "true");
       } else {
         res.status(500);
         return res.send(err.toString());

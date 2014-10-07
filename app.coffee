@@ -112,6 +112,7 @@ app.get '/:command/:key', (req, res) ->
 POST_COMMANDS = [
   # Keys
   "DEL", "RESTORE", "EXPIRE", "PEXPIRE",
+  "INCR", "DECR"
   # Strings
   "APPEND", "SET",
   # Lists
@@ -130,7 +131,7 @@ app.post '/:command/:key', (req, res) ->
 
   retrn = (err, dbres) ->
     if not err
-      return res.send("true")
+      return res.send((dbres + "") or "true")
     else
       res.status(500)
       return res.send(err.toString())
