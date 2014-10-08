@@ -1,10 +1,22 @@
+###
+env variables required:
+
+    GITHUB_CLIENT_ID
+    GITHUB_CLIENT_SECRET
+    REDIRECT_URL
+###
+
 express = require "express"
 favicon = require "serve-favicon"
 https = require "https"
 
 # node_redis client
 {db} = require "./db"
-{GITHUB_TOKEN_SET, GITHUB_AUTH_HASH, RESTRICTED_KEYS} = require "./constants"
+{
+ GITHUB_TOKEN_SET
+ GITHUB_AUTH_HASH
+ RESTRICTED_KEYS
+} = require "./constants"
 require "./ghev"
 #global.gh = gh
 
@@ -25,6 +37,20 @@ app.use (req, res, next) ->
     next()
 
 
+###
+https://github.com/isaacs/github/issues/156
+THIS SHOULD BE SSL!
+###
+if process.env.REDIRECT_URL.indexOf "https://" < 0
+  console.log "NO SSL in REDIRECT_URL!!!"
+  # process.exit "YOU NEED SSL, SON."
+browser_redirect_html = (access_token) -> """
+<script>
+window.location.replace(
+  "#{process.env.REDIRECT_URL}?access_token=#{access_token}"
+);
+</script>
+"""
 app.get '/auth_callback', (req, res) ->
   cb = (gh_response) ->
     str = ''
@@ -34,21 +60,14 @@ app.get '/auth_callback', (req, res) ->
       if gh_response.statusCode is 200
         access_token = JSON.parse(str).access_token
         gh.emit 'receiveAccessToken', access_token, () ->
-          res.status(200).write("OK")
+          html = browser_redirect_html access_token
+          res.status(200).write html
           res.send()
+          return
       else
         res.status(gh_response.statusCode).write(str)
         return res.send()
   gh.emit "requestToken", req, res, cb
-
-
-# block calls to restricted keys
-app.use (req, res, next) ->
-  key = req.param "key"
-  if key in RESTRICTED_KEYS
-    res.status(403).write("no.")
-    return res.send()
-  next()
 
 
 # authenticate with github token
@@ -71,6 +90,16 @@ app.use (req, res, next) ->
       return res.send()
 
 
+app.all '*', (req, res, next) ->
+  # TODO - limit to given origin?
+  res.header "Access-Control-Allow-Origin", "*"
+  res.header "Access-Control-Allow-Headers",
+             "Origin, X-Requested-With, Content-Type, Accept"
+  res.header "Access-Control-Allow-Methods",
+             "GET, POST, OPTIONS"
+  next()
+
+
 GET_COMMANDS = [
   # Keys
   "EXISTS", "DUMP", "PTTL",
@@ -87,6 +116,7 @@ app.get '/:command/:key', (req, res) ->
   if key in RESTRICTED_KEYS
     res.status(403).write("no.")
     return res.send()
+
   if c.toUpperCase() not in GET_COMMANDS
     res.status(400).write("unsupported command")
     return res.send()
@@ -97,7 +127,12 @@ app.get '/:command/:key', (req, res) ->
       # #wat?
       if parseInt(dbres) is dbres
         dbres = dbres + ""
-      return res.send(dbres)
+      if "jsonp" of req.query
+        res.status(200).jsonp dbres
+        return res.send()
+      else
+        return res.send(dbres)
+
     else
       res.status(500)
       return res.send(err.toString())
@@ -123,6 +158,9 @@ POST_COMMANDS = [
 app.post '/:command/:key', (req, res) ->
   c = req.param "command"
   key = req.param "key"
+  if key in RESTRICTED_KEYS
+    res.status(403).write("no.")
+    return res.send()
   v = req.rawBody
 
   if c.toUpperCase() not in POST_COMMANDS
@@ -131,7 +169,8 @@ app.post '/:command/:key', (req, res) ->
 
   retrn = (err, dbres) ->
     if not err
-      return res.send((dbres + "") or "true")
+      content = (dbres + "") or "true"
+      return res.send content
     else
       res.status(500)
       return res.send(err.toString())
