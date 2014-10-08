@@ -47,7 +47,7 @@ class Github extends EventEmitter
       gh_response.on 'end', () ->
         console.log str
         db.hset GITHUB_AUTH_HASH, access_token, str
-        cb()
+        cb str
     user_req.end()
 
 #module.exports.gh = new Github

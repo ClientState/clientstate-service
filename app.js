@@ -9,7 +9,7 @@ env variables required:
  */
 
 (function() {
-  var GET_COMMANDS, GITHUB_AUTH_HASH, GITHUB_TOKEN_SET, POST_COMMANDS, RESTRICTED_KEYS, app, browser_redirect_html, db, express, favicon, https, _ref,
+  var GET_COMMANDS, GITHUB_AUTH_HASH, GITHUB_TOKEN_SET, POST_COMMANDS, RESTRICTED_KEYS, app, auth_callback, db, express, favicon, https, logger, _ref,
     __indexOf = [].indexOf || function(item) { for (var i = 0, l = this.length; i < l; i++) { if (i in this && this[i] === item) return i; } return -1; };
 
   express = require("express");
@@ -18,6 +18,8 @@ env variables required:
 
   https = require("https");
 
+  logger = require("morgan");
+
   db = require("./db").db;
 
   _ref = require("./constants"), GITHUB_TOKEN_SET = _ref.GITHUB_TOKEN_SET, GITHUB_AUTH_HASH = _ref.GITHUB_AUTH_HASH, RESTRICTED_KEYS = _ref.RESTRICTED_KEYS;
@@ -25,6 +27,8 @@ env variables required:
   require("./ghev");
 
   app = express();
+
+  app.use(logger());
 
   app.use(favicon("" + __dirname + "/public/favicon.ico"));
 
@@ -41,6 +45,17 @@ env variables required:
     });
   });
 
+  app.get('/auth/:provider', function(req, res) {
+    var URL, state;
+    URL = "https://github.com/login/oauth/authorize";
+    URL += "?client_id=" + process.env.GITHUB_CLIENT_ID;
+    state = JSON.parse(req.query.opts)["state"];
+    URL += "&state=" + state;
+    URL += "";
+    res.redirect(URL);
+    return res.send();
+  });
+
 
   /*
   https://github.com/isaacs/github/issues/156
@@ -51,11 +66,13 @@ env variables required:
     console.log("NO SSL in REDIRECT_URL!!!");
   }
 
-  browser_redirect_html = function(access_token) {
-    return "<script>\nwindow.location.replace(\n  \"" + process.env.REDIRECT_URL + "?access_token=" + access_token + "\"\n);\n</script>";
+  console.log("REDIRECT_URL=", process.env.REDIRECT_URL);
+
+  auth_callback = function(o) {
+    return "<script>\n  window.opener.postMessage('" + (JSON.stringify(o)) + "', \"" + process.env.REDIRECT_URL + "\")\n</script>";
   };
 
-  app.get('/auth_callback', function(req, res) {
+  app.get('/auth_callback/:provider', function(req, res) {
     var cb;
     cb = function(gh_response) {
       var str;
@@ -64,19 +81,16 @@ env variables required:
         return str += chunk;
       });
       return gh_response.on('end', function() {
-        var access_token;
-        if (gh_response.statusCode === 200) {
-          access_token = JSON.parse(str).access_token;
-          return gh.emit('receiveAccessToken', access_token, function() {
-            var html;
-            html = browser_redirect_html(access_token);
-            res.status(200).write(html);
-            res.send();
-          });
-        } else {
-          res.status(gh_response.statusCode).write(str);
-          return res.send();
-        }
+        var o;
+        o = {};
+        o.data = JSON.parse(str);
+        o.status = "success";
+        o.state = req.query.state;
+        o.provider = req.param("provider");
+        return gh.emit("receiveAccessToken", o.data.access_token, function(resp_str) {
+          o.data.response = JSON.parse(resp_str);
+          return res.send(auth_callback(o));
+        });
       });
     };
     return gh.emit("requestToken", req, res, cb);

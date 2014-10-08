@@ -42,12 +42,10 @@
   MockGithub = (function(_super) {
     __extends(MockGithub, _super);
 
-    MockGithub.prototype.eventListeners = {};
-
-    MockGithub.prototype.emitCounts = {};
-
     function MockGithub() {
       this.requestToken = __bind(this.requestToken, this);
+      this.eventListeners = {};
+      this.emitCounts = {};
       this.on('requestToken', this.requestToken);
       this.on('receiveAccessToken', this.receiveAccessToken);
     }
@@ -69,7 +67,7 @@
       this.emitCounts['receiveAccessToken']++;
       db.sadd(GITHUB_TOKEN_SET, access_token);
       db.hset(GITHUB_AUTH_HASH, access_token, JSON.stringify(skyl));
-      return cb();
+      return cb('{}');
     };
 
     return MockGithub;
@@ -108,14 +106,20 @@
     it('allows call with token in querystring', function(done) {
       return request(app).get("/get/baz?access_token=TESTTOKEN").expect(200, done);
     });
-    return it('emits events when /auth_callback is called', function(done) {
-      return request(app).get("/auth_callback?code=thisisgreat").expect(200).expect("OK").end(function() {
+    it('emits events when /auth_callback/github is called', function(done) {
+      return request(app).get("/auth_callback/github?code=thisisgreat").expect(200).expect("OK").end(function() {
         assert.equal(gh.emitCounts["requestToken"], 1);
         assert.equal(gh.emitCounts["receiveAccessToken"], 1);
         return db.sismember(GITHUB_TOKEN_SET, "boom", function(err, dbres) {
           assert.equal(dbres, 1);
           return done();
         });
+      });
+    });
+    return it('/auth/github redirects to github.com', function(done) {
+      return request(app).get('/auth/github?opts={"state": "foobar"}').expect(302).end(function(err, res) {
+        expect(res.header['location']).to.be.equal("https://github.com/login/oauth/authorize" + ("?client_id=" + process.env.GITHUB_CLIENT_ID + "&state=foobar"));
+        return done();
       });
     });
   });

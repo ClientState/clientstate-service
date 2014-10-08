@@ -66,7 +66,7 @@
         return gh_response.on('end', function() {
           console.log(str);
           db.hset(GITHUB_AUTH_HASH, access_token, str);
-          return cb();
+          return cb(str);
         });
       });
       return user_req.end();

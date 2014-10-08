@@ -1,6 +1,7 @@
 request = require 'supertest'
 {EventEmitter} = require 'events'
 {assert, expect} = require 'chai'
+#should = require 'should'
 
 {app} = require '../app'
 {db} = require '../db'
@@ -22,9 +23,10 @@ class MockResponse extends EventEmitter
 
 
 class MockGithub extends EventEmitter
-  eventListeners: {}
-  emitCounts: {}
+
   constructor: ->
+    @eventListeners = {}
+    @emitCounts = {}
     @on 'requestToken', @requestToken
     @on 'receiveAccessToken', @receiveAccessToken
   requestToken: (req, res, cb) =>
@@ -36,7 +38,8 @@ class MockGithub extends EventEmitter
     @emitCounts['receiveAccessToken']++
     db.sadd GITHUB_TOKEN_SET, access_token
     db.hset GITHUB_AUTH_HASH, access_token, JSON.stringify(skyl)
-    cb()
+    # This is really a bunch of stuff for Oauth..
+    cb '{}'
 
 # nice article
 # pragprog.com decouple-your-apps-with-eventdriven-coffeescript
@@ -82,9 +85,9 @@ describe 'GITHUB AUTH', () ->
       .get("/get/baz?access_token=TESTTOKEN")
       .expect(200, done)
 
-  it 'emits events when /auth_callback is called', (done) ->
+  it 'emits events when /auth_callback/github is called', (done) ->
     request(app)
-      .get("/auth_callback?code=thisisgreat")
+      .get("/auth_callback/github?code=thisisgreat")
       .expect(200)
       .expect("OK")
       .end () ->
@@ -93,6 +96,17 @@ describe 'GITHUB AUTH', () ->
         db.sismember GITHUB_TOKEN_SET, "boom", (err, dbres) ->
           assert.equal dbres, 1
           done()
+
+  it '/auth/github redirects to github.com', (done) ->
+    request(app)
+      .get('/auth/github?opts={"state": "foobar"}')
+      .expect(302)
+      .end (err, res) ->
+        expect(res.header['location']).to.be.equal(
+          "https://github.com/login/oauth/authorize" +
+          "?client_id=#{process.env.GITHUB_CLIENT_ID}&state=foobar"
+        )
+        done()
 
 
 describe 'KEYS - DEL, EXISTS', () ->

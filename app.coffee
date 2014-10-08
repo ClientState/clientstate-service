@@ -9,6 +9,7 @@ env variables required:
 express = require "express"
 favicon = require "serve-favicon"
 https = require "https"
+logger = require "morgan"
 
 # node_redis client
 {db} = require "./db"
@@ -22,7 +23,7 @@ require "./ghev"
 
 app = express()
 
-
+app.use logger()
 app.use favicon "#{__dirname}/public/favicon.ico"
 
 
@@ -37,6 +38,17 @@ app.use (req, res, next) ->
     next()
 
 
+app.get '/auth/:provider', (req, res) ->
+  # this is how Oauth kicks off the window.
+  URL = "https://github.com/login/oauth/authorize"
+  URL += "?client_id=#{process.env.GITHUB_CLIENT_ID}"
+  state = JSON.parse(req.query.opts)["state"]
+  URL += "&state=#{state}"
+  URL += ""
+  res.redirect(URL)
+  return res.send()
+
+
 ###
 https://github.com/isaacs/github/issues/156
 THIS SHOULD BE SSL!
@@ -44,29 +56,28 @@ THIS SHOULD BE SSL!
 if process.env.REDIRECT_URL.indexOf "https://" < 0
   console.log "NO SSL in REDIRECT_URL!!!"
   # process.exit "YOU NEED SSL, SON."
-browser_redirect_html = (access_token) -> """
+
+# the auth_callback is now strictly for a browser popup flow .. hrm ..
+console.log "REDIRECT_URL=", process.env.REDIRECT_URL
+auth_callback = (o) -> """
 <script>
-window.location.replace(
-  "#{process.env.REDIRECT_URL}?access_token=#{access_token}"
-);
+  window.opener.postMessage('#{JSON.stringify o}', "#{process.env.REDIRECT_URL}")
 </script>
 """
-app.get '/auth_callback', (req, res) ->
+app.get '/auth_callback/:provider', (req, res) ->
   cb = (gh_response) ->
     str = ''
     gh_response.on 'data', (chunk) ->
       str += chunk
     gh_response.on 'end', () ->
-      if gh_response.statusCode is 200
-        access_token = JSON.parse(str).access_token
-        gh.emit 'receiveAccessToken', access_token, () ->
-          html = browser_redirect_html access_token
-          res.status(200).write html
-          res.send()
-          return
-      else
-        res.status(gh_response.statusCode).write(str)
-        return res.send()
+      o = {}
+      o.data = JSON.parse str
+      o.status = "success"
+      o.state = req.query.state
+      o.provider = req.param "provider"
+      gh.emit "receiveAccessToken", o.data.access_token, (resp_str) ->
+        o.data.response = JSON.parse resp_str
+        return res.send auth_callback o
   gh.emit "requestToken", req, res, cb
 
 
