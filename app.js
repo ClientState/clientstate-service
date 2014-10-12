@@ -9,7 +9,7 @@ env variables required:
  */
 
 (function() {
-  var GET_COMMANDS, GITHUB_AUTH_HASH, GITHUB_TOKEN_SET, POST_COMMANDS, RESTRICTED_KEYS, app, auth_callback, db, express, favicon, https, logger, _ref,
+  var GET_COMMANDS, GITHUB_AUTH_HASH, GITHUB_TOKEN_SET, POST_COMMANDS, RESTRICTED_KEYS, app, db, express, favicon, https, logger, oauth, _ref,
     __indexOf = [].indexOf || function(item) { for (var i = 0, l = this.length; i < l; i++) { if (i in this && this[i] === item) return i; } return -1; };
 
   express = require("express");
@@ -19,6 +19,8 @@ env variables required:
   https = require("https");
 
   logger = require("morgan");
+
+  oauth = require("oauth-express");
 
   db = require("./db").db;
 
@@ -45,55 +47,16 @@ env variables required:
     });
   });
 
-  app.get('/auth/:provider', function(req, res) {
-    var URL, state;
-    URL = "https://github.com/login/oauth/authorize";
-    URL += "?client_id=" + process.env.GITHUB_CLIENT_ID;
-    state = JSON.parse(req.query.opts)["state"];
-    URL += "&state=" + state;
-    URL += "";
-    res.redirect(URL);
-    return res.send();
-  });
+  app.get('/auth/:provider', oauth.handlers.auth_provider_redirect);
 
+  app.get('/auth_callback/:provider', oauth.handlers.auth_callback);
 
-  /*
-  https://github.com/isaacs/github/issues/156
-  THIS SHOULD BE SSL!
-   */
-
-  if (process.env.REDIRECT_URL.indexOf("https://" < 0)) {
-    console.log("NO SSL in REDIRECT_URL!!!");
-  }
-
-  console.log("REDIRECT_URL=", process.env.REDIRECT_URL);
-
-  auth_callback = function(o) {
-    return "<script>\n  window.opener.postMessage('" + (JSON.stringify(o)) + "', \"" + process.env.REDIRECT_URL + "\")\n</script>";
-  };
-
-  app.get('/auth_callback/:provider', function(req, res) {
-    var cb;
-    cb = function(gh_response) {
-      var str;
-      str = '';
-      gh_response.on('data', function(chunk) {
-        return str += chunk;
-      });
-      return gh_response.on('end', function() {
-        var o;
-        o = {};
-        o.data = JSON.parse(str);
-        o.status = "success";
-        o.state = req.query.state;
-        o.provider = req.param("provider");
-        return gh.emit("receiveAccessToken", o.data.access_token, function(resp_str) {
-          o.data.response = JSON.parse(resp_str);
-          return res.send(auth_callback(o));
-        });
-      });
-    };
-    return gh.emit("requestToken", req, res, cb);
+  oauth.emitters.github.on('complete', function(result) {
+    return db.sadd(GITHUB_TOKEN_SET, result.data.access_token, function(err) {
+      if (!err) {
+        return db.hset(GITHUB_AUTH_HASH, result.data.access_token, JSON.stringify(result.user_data));
+      }
+    });
   });
 
   app.use(function(req, res, next) {

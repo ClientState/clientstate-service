@@ -10,6 +10,7 @@ express = require "express"
 favicon = require "serve-favicon"
 https = require "https"
 logger = require "morgan"
+oauth = require "oauth-express"
 
 # node_redis client
 {db} = require "./db"
@@ -38,47 +39,13 @@ app.use (req, res, next) ->
     next()
 
 
-app.get '/auth/:provider', (req, res) ->
-  # this is how Oauth kicks off the window.
-  URL = "https://github.com/login/oauth/authorize"
-  URL += "?client_id=#{process.env.GITHUB_CLIENT_ID}"
-  state = JSON.parse(req.query.opts)["state"]
-  URL += "&state=#{state}"
-  URL += ""
-  res.redirect(URL)
-  return res.send()
-
-
-###
-https://github.com/isaacs/github/issues/156
-THIS SHOULD BE SSL!
-###
-if process.env.REDIRECT_URL.indexOf "https://" < 0
-  console.log "NO SSL in REDIRECT_URL!!!"
-  # process.exit "YOU NEED SSL, SON."
-
-# the auth_callback is now strictly for a browser popup flow .. hrm ..
-console.log "REDIRECT_URL=", process.env.REDIRECT_URL
-auth_callback = (o) -> """
-<script>
-  window.opener.postMessage('#{JSON.stringify o}', "#{process.env.REDIRECT_URL}")
-</script>
-"""
-app.get '/auth_callback/:provider', (req, res) ->
-  cb = (gh_response) ->
-    str = ''
-    gh_response.on 'data', (chunk) ->
-      str += chunk
-    gh_response.on 'end', () ->
-      o = {}
-      o.data = JSON.parse str
-      o.status = "success"
-      o.state = req.query.state
-      o.provider = req.param "provider"
-      gh.emit "receiveAccessToken", o.data.access_token, (resp_str) ->
-        o.data.response = JSON.parse resp_str
-        return res.send auth_callback o
-  gh.emit "requestToken", req, res, cb
+# oauth-express
+app.get '/auth/:provider', oauth.handlers.auth_provider_redirect
+app.get '/auth_callback/:provider', oauth.handlers.auth_callback
+oauth.emitters.github.on 'complete', (result) ->
+  db.sadd GITHUB_TOKEN_SET, result.data.access_token, (err) ->
+    if not err
+      db.hset GITHUB_AUTH_HASH, result.data.access_token, JSON.stringify(result.user_data)
 
 
 # authenticate with github token

@@ -7,44 +7,10 @@ request = require 'supertest'
 {db} = require '../db'
 {GITHUB_TOKEN_SET, GITHUB_AUTH_HASH} = require '../constants'
 
-
-skyl =
+skyl = {
   "login": "skyl"
-  "id": 61438
-
-
-class MockResponse extends EventEmitter
-  constructor: (@statusCode, body) ->
-    self = this
-    setTimeout(() ->
-      self.emit "data", body
-      self.emit "end"
-    , 1)
-
-
-class MockGithub extends EventEmitter
-
-  constructor: ->
-    @eventListeners = {}
-    @emitCounts = {}
-    @on 'requestToken', @requestToken
-    @on 'receiveAccessToken', @receiveAccessToken
-  requestToken: (req, res, cb) =>
-    @emitCounts['requestToken'] ?= 0
-    @emitCounts['requestToken']++
-    cb(new MockResponse(200, '{"access_token": "boom"}'))
-  receiveAccessToken: (access_token, cb) ->
-    @emitCounts['receiveAccessToken'] ?= 0
-    @emitCounts['receiveAccessToken']++
-    db.sadd GITHUB_TOKEN_SET, access_token
-    db.hset GITHUB_AUTH_HASH, access_token, JSON.stringify(skyl)
-    # This is really a bunch of stuff for Oauth..
-    cb '{}'
-
-# nice article
-# pragprog.com decouple-your-apps-with-eventdriven-coffeescript
-global.gh = new MockGithub
-
+  "id": "61438"
+}
 
 resetdb = () ->
   db.flushall()
@@ -84,18 +50,6 @@ describe 'GITHUB AUTH', () ->
     request(app)
       .get("/get/baz?access_token=TESTTOKEN")
       .expect(200, done)
-
-  it 'emits events when /auth_callback/github is called', (done) ->
-    request(app)
-      .get("/auth_callback/github?code=thisisgreat")
-      .expect(200)
-      .expect("OK")
-      .end () ->
-        assert.equal gh.emitCounts["requestToken"], 1
-        assert.equal gh.emitCounts["receiveAccessToken"], 1
-        db.sismember GITHUB_TOKEN_SET, "boom", (err, dbres) ->
-          assert.equal dbres, 1
-          done()
 
   it '/auth/github redirects to github.com', (done) ->
     request(app)

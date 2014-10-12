@@ -5,10 +5,9 @@
   "private": true,
   "dependencies": {
     "chai": "^1.9.2",
-    "events": "^1.0.2",
     "express": "4.x",
+    "oauth-express": "0.0.1",
     "redis": "^0.12.1",
-    "repl": "^0.1.3",
     "serve-favicon": "^2.1.5",
     "supertest": "^0.14.0"
   }
