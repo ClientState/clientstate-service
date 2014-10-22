@@ -1,8 +1,8 @@
 {
-  "name": "hello-world",
-  "description": "hello world test app",
+  "name": "clientstate-redis",
+  "description": "express http api in front of redis",
   "version": "0.0.1",
-  "private": true,
+  "private": false,
   "dependencies": {
     "chai": "^1.9.2",
     "express": "4.x",
