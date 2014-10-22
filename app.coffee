@@ -56,8 +56,10 @@ app.use (req, res, next) ->
     return res.send()
   db.sismember GITHUB_TOKEN_SET, token, (err, ismemberres) ->
     # what would the err be?
+    # TODO: this is not production-ready, eh?
     if err?
-      res.status(500).write(err.toString())
+      console.log(err.toString())
+      res.status(500)
       return res.send()
     if ismemberres is 1
       next()

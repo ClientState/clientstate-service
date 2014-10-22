@@ -68,7 +68,8 @@ env variables required:
     }
     return db.sismember(GITHUB_TOKEN_SET, token, function(err, ismemberres) {
       if (err != null) {
-        res.status(500).write(err.toString());
+        console.log(err.toString());
+        res.status(500);
         return res.send();
       }
       if (ismemberres === 1) {
