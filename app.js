@@ -9,16 +9,12 @@ env variables required:
  */
 
 (function() {
-  var GET_COMMANDS, GITHUB_AUTH_HASH, GITHUB_TOKEN_SET, POST_COMMANDS, RESTRICTED_KEYS, app, db, express, favicon, https, logger, oauth, _ref,
+  var GET_COMMANDS, GITHUB_AUTH_HASH, GITHUB_TOKEN_SET, POST_COMMANDS, RESTRICTED_KEYS, app, db, express, https, oauth, _ref,
     __indexOf = [].indexOf || function(item) { for (var i = 0, l = this.length; i < l; i++) { if (i in this && this[i] === item) return i; } return -1; };
 
   express = require("express");
 
-  favicon = require("serve-favicon");
-
   https = require("https");
-
-  logger = require("morgan");
 
   oauth = require("oauth-express");
 
@@ -30,9 +26,17 @@ env variables required:
 
   app = express();
 
-  app.use(logger());
+  app.get('/auth/:provider', oauth.handlers.auth_provider_redirect);
 
-  app.use(favicon("" + __dirname + "/public/favicon.ico"));
+  app.get('/auth_callback/:provider', oauth.handlers.auth_callback);
+
+  oauth.emitters.github.on('complete', function(result) {
+    return db.sadd(GITHUB_TOKEN_SET, result.data.access_token, function(err) {
+      if (!err) {
+        return db.hset(GITHUB_AUTH_HASH, result.data.access_token, JSON.stringify(result.user_data));
+      }
+    });
+  });
 
   app.use(function(req, res, next) {
     var data;
@@ -44,18 +48,6 @@ env variables required:
     return req.on('end', function() {
       req.rawBody = data;
       return next();
-    });
-  });
-
-  app.get('/auth/:provider', oauth.handlers.auth_provider_redirect);
-
-  app.get('/auth_callback/:provider', oauth.handlers.auth_callback);
-
-  oauth.emitters.github.on('complete', function(result) {
-    return db.sadd(GITHUB_TOKEN_SET, result.data.access_token, function(err) {
-      if (!err) {
-        return db.hset(GITHUB_AUTH_HASH, result.data.access_token, JSON.stringify(result.user_data));
-      }
     });
   });
 

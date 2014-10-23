@@ -7,9 +7,7 @@ env variables required:
 ###
 
 express = require "express"
-favicon = require "serve-favicon"
 https = require "https"
-logger = require "morgan"
 oauth = require "oauth-express"
 
 # node_redis client
@@ -24,8 +22,18 @@ require "./ghev"
 
 app = express()
 
-app.use logger()
-app.use favicon "#{__dirname}/public/favicon.ico"
+
+# oauth-express
+app.get '/auth/:provider', oauth.handlers.auth_provider_redirect
+app.get '/auth_callback/:provider', oauth.handlers.auth_callback
+oauth.emitters.github.on 'complete', (result) ->
+  db.sadd GITHUB_TOKEN_SET, result.data.access_token, (err) ->
+    if not err
+      db.hset(
+        GITHUB_AUTH_HASH,
+        result.data.access_token,
+        JSON.stringify(result.user_data)
+      )
 
 
 # collect the rawBody
@@ -37,15 +45,6 @@ app.use (req, res, next) ->
   req.on 'end', () ->
     req.rawBody = data
     next()
-
-
-# oauth-express
-app.get '/auth/:provider', oauth.handlers.auth_provider_redirect
-app.get '/auth_callback/:provider', oauth.handlers.auth_callback
-oauth.emitters.github.on 'complete', (result) ->
-  db.sadd GITHUB_TOKEN_SET, result.data.access_token, (err) ->
-    if not err
-      db.hset GITHUB_AUTH_HASH, result.data.access_token, JSON.stringify(result.user_data)
 
 
 # authenticate with github token
