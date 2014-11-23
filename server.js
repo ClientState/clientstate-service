@@ -5,7 +5,10 @@
   app = require("./app").app;
 
   server = app.listen(3000, function() {
-    return console.log('Listening on port %d', server.address().port);
+    console.log('Listening on port %d', server.address().port);
+    if (process.env.DEBUG != null) {
+      console.log(process.env);
+    }
   });
 
 }).call(this);
