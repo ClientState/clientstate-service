@@ -9,6 +9,7 @@ env variables required:
 express = require "express"
 https = require "https"
 oauth = require "oauth-express"
+cors = require "cors"
 
 # node_redis client
 {db} = require "./db"
@@ -21,6 +22,9 @@ require "./ghev"
 #global.gh = gh
 
 app = express()
+
+app.use cors()
+app.options "*", cors()
 
 
 # oauth-express
@@ -67,16 +71,6 @@ app.use (req, res, next) ->
     else
       res.status(403).write("Invalid")
       return res.send()
-
-
-app.all '*', (req, res, next) ->
-  # TODO - limit to given origin?
-  res.header "Access-Control-Allow-Origin", "*"
-  res.header "Access-Control-Allow-Headers",
-             "Origin, X-Requested-With, Content-Type, Accept"
-  res.header "Access-Control-Allow-Methods",
-             "GET, POST, OPTIONS"
-  next()
 
 
 GET_COMMANDS = [

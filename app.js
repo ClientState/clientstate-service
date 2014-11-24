@@ -9,7 +9,7 @@ env variables required:
  */
 
 (function() {
-  var GET_COMMANDS, GITHUB_AUTH_HASH, GITHUB_TOKEN_SET, POST_COMMANDS, RESTRICTED_KEYS, app, db, express, https, oauth, _ref,
+  var GET_COMMANDS, GITHUB_AUTH_HASH, GITHUB_TOKEN_SET, POST_COMMANDS, RESTRICTED_KEYS, app, cors, db, express, https, oauth, _ref,
     __indexOf = [].indexOf || function(item) { for (var i = 0, l = this.length; i < l; i++) { if (i in this && this[i] === item) return i; } return -1; };
 
   express = require("express");
@@ -18,6 +18,8 @@ env variables required:
 
   oauth = require("oauth-express");
 
+  cors = require("cors");
+
   db = require("./db").db;
 
   _ref = require("./constants"), GITHUB_TOKEN_SET = _ref.GITHUB_TOKEN_SET, GITHUB_AUTH_HASH = _ref.GITHUB_AUTH_HASH, RESTRICTED_KEYS = _ref.RESTRICTED_KEYS;
@@ -25,6 +27,10 @@ env variables required:
   require("./ghev");
 
   app = express();
+
+  app.use(cors());
+
+  app.options("*", cors());
 
   app.get('/auth/:provider', oauth.handlers.auth_provider_redirect);
 
@@ -71,13 +77,6 @@ env variables required:
         return res.send();
       }
     });
-  });
-
-  app.all('*', function(req, res, next) {
-    res.header("Access-Control-Allow-Origin", "*");
-    res.header("Access-Control-Allow-Headers", "Origin, X-Requested-With, Content-Type, Accept");
-    res.header("Access-Control-Allow-Methods", "GET, POST, OPTIONS");
-    return next();
   });
 
   GET_COMMANDS = ["EXISTS", "DUMP", "PTTL", "GET", "LRANGE", "HGET", "HLEN", "HKEYS"];

@@ -6,6 +6,7 @@
   "private": false,
   "dependencies": {
     "chai": "^1.9.2",
+    "cors": "^2.5.2",
     "express": "4.x",
     "oauth-express": "0.0.1",
     "redis": "^0.12.1",
