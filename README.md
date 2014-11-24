@@ -19,7 +19,7 @@ Set environment variables for the service:
     GITHUB_CLIENT_SECRET
     OAUTH_REDIRECT_URL
 
-So, if you launched a clientstate-redis-js app on localhost:8090,
+So, if you launched a clientstate-js app on localhost:8090,
 you would make your make OAUTH_REDIRECT_URL="http://localhost:8090".
 Or, "https://yourapp.com" in production.
 
@@ -49,4 +49,4 @@ and talking to the redis container.
 Authenticate and use the service with a browser
 ================================================
 
-see https://github.com/ClientState/clientstate-redis-js
+see https://github.com/ClientState/clientstate-js
