@@ -1,7 +1,7 @@
 {
-  "name": "clientstate-redis",
+  "name": "clientstate-service",
   "description": "express http api in front of redis",
-  "repository": "https://github.com/ClientState/clientstate-redis",
+  "repository": "https://github.com/ClientState/clientstate-service",
   "version": "0.0.1",
   "private": false,
   "dependencies": {

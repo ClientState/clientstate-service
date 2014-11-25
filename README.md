@@ -33,12 +33,12 @@ Run redis:
 
 Build clientstate, after cloning this repository:
 
-    docker build -t skyl/clientstate-redis .
+    docker build -t skyl/clientstate-service .
     docker run -itd \
     -e "GITHUB_CLIENT_ID=$GITHUB_CLIENT_ID" \
     -e "GITHUB_CLIENT_SECRET=$GITHUB_CLIENT_SECRET" \
     -e "OAUTH_REDIRECT_URL=http://localhost:8090" \
-    -p 3000:3000 --name cs-redis --link redis:redis skyl/clientstate-redis
+    -p 3000:3000 --name cs-redis --link redis:redis skyl/clientstate-service
 
 Now you have port 0.0.0.0:3000 published to the docker server machine
 and talking to the redis container.
